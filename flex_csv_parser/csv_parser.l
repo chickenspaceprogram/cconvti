@@ -11,7 +11,6 @@ CSV_ENTRY   -?[0-9]+"."?[0-9]*([eE][+-][0-9]+)?
 ,{CSV_ENTRY}   {
         ECHO;
         ++entries_in_current_row;
-        printf("`%d`", entries_in_current_row);
 }
 
 ^{CSV_ENTRY}    {
@@ -41,17 +40,15 @@ CSV_ENTRY   -?[0-9]+"."?[0-9]*([eE][+-][0-9]+)?
 /*
 could totally just be a wrapper function for yylex doing a bit of error handling, etc.
 */
-int main(char* filename)
+int main(void)
 {
-	if(argc > 1)
-	{
-		FILE *fp = fopen(argv[1], "r");
-		if(fp) {
-            yyin = fp;
-        } else {
-            fprintf(stderr, "Could not find the file at `%s`.\ncconvti exiting...\n", filename);
-        }
-	}
+	char *filename = "mycsv.csv";
+	FILE *fp = fopen(filename, "r");
+	if(fp) {
+        yyin = fp;
+    } else {
+        fprintf(stderr, "Could not find the file at `%s`.\ncconvti exiting...\n", filename);
+    }
 	yylex();
     if (num_rows <= 1) 
     {
