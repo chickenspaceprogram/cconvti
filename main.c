@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "fileio/input.h"
+#include "fileio/loadcsv.h"
 
 int main(int argc, char *argv[]) 
 {

@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
-#include "input.h"
+#include "loadcsv.h"
 
 #define STARTING_BUFFER_SIZE 1024
 #define TRUE 1
