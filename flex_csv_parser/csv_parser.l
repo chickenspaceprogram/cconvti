@@ -41,13 +41,16 @@ CSV_ENTRY   -?[0-9]+"."?[0-9]*([eE][+-][0-9]+)?
 /*
 could totally just be a wrapper function for yylex doing a bit of error handling, etc.
 */
-int main(int argc, char* argv[])
+int main(char* filename)
 {
 	if(argc > 1)
 	{
 		FILE *fp = fopen(argv[1], "r");
-		if(fp)
-			yyin = fp;
+		if(fp) {
+            yyin = fp;
+        } else {
+            fprintf(stderr, "Could not find the file at `%s`.\ncconvti exiting...\n", filename);
+        }
 	}
 	yylex();
     if (num_rows <= 1) 
