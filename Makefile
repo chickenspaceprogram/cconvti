@@ -1,5 +1,5 @@
 # this is a terrible makefile but it is good enough for now
-.phony: all clean
+.PHONY: all clean
 
 all: main
 
