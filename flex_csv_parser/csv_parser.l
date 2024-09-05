@@ -80,12 +80,14 @@ struct real_number parse_real_number(char *number) {
                     break;
                 case 'e': case 'E':
                     is_in_mantissa = 0;
-                    if (!found_decimal_point) {
+                    if (!found_decimal_point) 
+                    {
                         return_number.exponent += i - 1; // something like 123e... should get +2 to its exponent. 000123e will also get +2 overall, since it gets +5 from this and -3 from the zeroes.
                     }
                     break;
                 case '0':
-                    if (on_leading_zero) {
+                    if (on_leading_zero) 
+                    {
                         return_number.exponent -= 1;
                         break;
                     }
@@ -102,6 +104,7 @@ struct real_number parse_real_number(char *number) {
                     if (current_number_place == 14 && number[i] >= 5) 
                     {
                         return_number = inc_mantissa(return_number); // since rounding a negative down and a positive up both increment the mantissa without regard to the sign, inc_mantissa works here
+                        break;
                     } 
                     else if (current_number_place >= 14) 
                     {
@@ -113,7 +116,8 @@ struct real_number parse_real_number(char *number) {
                         number[i] <<= 4; // bitshifting number left by 4 since this digit is the most significant nibble in this byte
                     }
                 
-                    return_number.mantissa[current_number_place] += number[i];
+                    return_number.mantissa[current_number_place / 2] += number[i];
+                    ++current_number_place;
             }
         }
         else 
@@ -130,7 +134,10 @@ struct real_number parse_real_number(char *number) {
         }
         ++i;
     }
-    printf("%s\n", number);
+    if (!found_decimal_point) 
+    {
+        return_number.exponent += i - 1;
+    }
     return return_number;
 }
 %}
