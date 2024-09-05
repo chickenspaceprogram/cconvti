@@ -3,13 +3,13 @@
 
 all: main
 
-main: out/main.o out/loadcsv.o
-	cc -Wall -o main out/main.o out/csv_parser.o
+main: out/main.o out/csv_parser.o
+	cc -Wall -ll -o main out/main.o out/csv_parser.o
 
 out/main.o: out main.c
 	cc -Wall -c -o out/main.o main.c
 
-out/csv_parser.o: out/csv_parser.c
+out/csv_parser.o: flex_csv_parser/csv_parser.c
 	cc -Wall -ll -c -o out/csv_parser.o flex_csv_parser/csv_parser.c
 
 flex_csv_parser/csv_parser.c: flex_csv_parser/csv_parser.l

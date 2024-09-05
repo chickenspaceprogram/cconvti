@@ -62,7 +62,7 @@ struct real_number parse_real_number(char *number) {
     int is_in_mantissa = 1;
     int found_decimal_point = 0;
     int on_leading_zero = 1;
-    int current_number_place = 0;
+    int num_digits = 0;
     int exponent_from_csv;
     struct real_number return_number = {0, 0x80, {0, 0, 0, 0, 0, 0, 0}};
     
@@ -87,7 +87,7 @@ struct real_number parse_real_number(char *number) {
                     is_in_mantissa = 0;
                     if (!found_decimal_point) 
                     {
-                        return_number.exponent += i - 1; // something like 123e... should get +2 to its exponent. 000123e will also get +2 overall, since it gets +5 from this and -3 from the zeroes.
+                        return_number.exponent += num_digits - 1; // something like 123e... should get +2 to its exponent. 000123e will also get +2 overall, since it gets +5 from this and -3 from the zeroes.
                     }
                     break;
                 case '0':
@@ -106,23 +106,23 @@ struct real_number parse_real_number(char *number) {
                     number[i] -= '0'; // converting character from ASCII -> a number
 
                     // taking care of rounding
-                    if (current_number_place == 14 && number[i] >= 5) 
+                    if (num_digits == 14 && number[i] >= 5) 
                     {
                         return_number = inc_mantissa(return_number); // since rounding a negative down and a positive up both increment the mantissa without regard to the sign, inc_mantissa works here
                         break;
                     } 
-                    else if (current_number_place >= 14) 
+                    else if (num_digits >= 14) 
                     {
                         break;
                     }
 
-                    if (current_number_place % 2 == 0)
+                    if (num_digits % 2 == 0)
                     {
                         number[i] <<= 4; // bitshifting number left by 4 since this digit is the most significant nibble in this byte
                     }
                 
-                    return_number.mantissa[current_number_place / 2] += number[i];
-                    ++current_number_place;
+                    return_number.mantissa[num_digits / 2] += number[i];
+                    ++num_digits;
             }
         }
         else 
@@ -146,7 +146,7 @@ struct real_number parse_real_number(char *number) {
     }
     if (!found_decimal_point) 
     {
-        return_number.exponent += i - 1;
+        return_number.exponent += num_digits - 1;
     }
     return return_number;
 }
@@ -164,7 +164,8 @@ struct real_number parse_real_number(char *number) {
         {
             num_cols = entries_in_current_row;
         } 
-        else if (entries_in_current_row != num_cols) {
+        else if (entries_in_current_row != num_cols) 
+        {
             fprintf(stderr, "Uneven rows: Row %d is %d entries long, while the first row is %d entries long.\n", num_rows, entries_in_current_row, num_cols);
             ++error_counter;
         }
@@ -201,7 +202,7 @@ int read_csv(FILE *input_fileptr, FILE *output_fileptr, int csv_is_complex)
     // validating file pointers (probably unnecessary but hey, why not)
 	if (input_fileptr) 
     {
-        yyin = input_file_ptr;
+        yyin = input_fileptr;
     } 
     else 
     {
@@ -226,14 +227,16 @@ int read_csv(FILE *input_fileptr, FILE *output_fileptr, int csv_is_complex)
     {
         num_cols = entries_in_current_row;
     } 
-    else if (entries_in_current_row != num_cols) {
+    else if (entries_in_current_row != num_cols) 
+    {
         fprintf(stderr, "Error: Uneven rows: Row %d is %d entries long, while other rows are %d entries long.\n", num_rows, entries_in_current_row, num_cols);
         ++error_counter;
     }
 
     // ensuring the user hasn't tried to make a complex matrix
-    if (num_rows > 1 && is_complex) {
-        fprintf(stderr, "Error: Cannot store complex values to a matrix.\n")
+    if (num_rows > 1 && is_complex) 
+    {
+        fprintf(stderr, "Error: Cannot store complex values to a matrix.\n");
         ++error_counter;
     }
 
@@ -248,10 +251,10 @@ int read_csv(FILE *input_fileptr, FILE *output_fileptr, int csv_is_complex)
         {
             fprintf(stderr, "%d Warnings ", warning_counter);
         }
-        fprintf(stderr, "occurred.\n");
+        fprintf(stderr, "generated.\n");
         if (error_counter)
         {
-            fprintf("Conversion of CSV to .8x* format failed.\n");
+            fprintf(stderr, "Conversion of CSV to .8x* format failed.\n");
             return 1;
         }
     }

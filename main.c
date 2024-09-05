@@ -16,6 +16,7 @@ int main(int argc, char *argv[])
             printf("cconvti exiting...\n");
             return 1;
         }
+    }
     else
     {
         fprintf(stderr, "Incorrect number of arguments.\ncconvti exiting...\n");
