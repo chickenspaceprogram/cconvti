@@ -2,154 +2,15 @@ CSV_ENTRY   -?[0-9]+"."?[0-9]*([eE][+-][0-9]+)?
 
 %{
     #include "csv_parser.h"
+    #include "num_parsing.h"
 
-    // eww globals
+    // i know globals kinda suck, don't bully me
     int num_rows = 0;
     int num_cols = 0;
     int entries_in_current_row = 0;
     int is_complex;
     int error_counter = 0;
-    int warning_counter = 0;
-/*
-A real number, represented as it is on TI-8x calculators.
-*/
-struct real_number {
-unsigned char flags;
-unsigned char exponent;
-unsigned char mantissa[7];
-};
 
-/*
-Writes number to the file at filename.
-*/
-void write_real_number(struct real_number number, FILE *fp) {
-    fputc(number.flags, fp);
-    fputc(number.exponent, fp);
-    for (int i = 0; i < 7; ++i) {
-        fputc(number.mantissa[i], fp);
-    }
-}
-
-/*
-Increments the mantissa of `number` by 1, without regard for its sign or exponent.
-*/
-struct real_number inc_mantissa(struct real_number number) {
-    int current_digit;
-    // the happy case
-    for (int i = 13; i >= 0; --i) {
-        if (i % 2 == 0) {
-            number.mantissa[i / 2] += 0x10;
-            current_digit = (number.mantissa[i / 2] & 0xF0) >> 4;
-        } else {
-            ++number.mantissa[i / 2];
-            current_digit = number.mantissa[i / 2] & 0x0F;
-        }
-        if (current_digit < 10) {
-            return number;
-        }
-    }
-    // since we are only incrementing by one, if we've gotten this far, every digit had to be a 9
-    number.mantissa[0] = 0x10;
-    for (int i = 1; i < 7; ++i) {
-        number.mantissa[i] = 0;
-    }
-    --number.exponent;
-    return number;
-}
-
-struct real_number parse_real_number(char *number) {
-    int i = 0;
-    int is_in_mantissa = 1;
-    int found_decimal_point = 0;
-    int on_leading_zero = 1;
-    int num_digits = 0;
-    int exponent_from_csv;
-    struct real_number return_number = {0, 0x80, {0, 0, 0, 0, 0, 0, 0}};
-    
-
-    if (is_complex) {
-        return_number.flags += 0x0C;
-    }
-
-    while (number[i] != 0) {
-
-        if (is_in_mantissa) 
-        {
-            switch (number[i]) {
-                case '-':
-                   return_number.flags += 0x80; // flipping the first bit of the flag makes the number negative
-                   break;
-                case '.':
-                    return_number.exponent += i - 1; // something like 3.1415 will have no change to its exponent, but 314.15 will need its exponent incremented by 2
-                    found_decimal_point = 1;
-                    break;
-                case 'e': case 'E':
-                    is_in_mantissa = 0;
-                    if (!found_decimal_point) 
-                    {
-                        return_number.exponent += num_digits - 1; // something like 123e... should get +2 to its exponent. 000123e will also get +2 overall, since it gets +5 from this and -3 from the zeroes.
-                    }
-                    break;
-                case '0':
-                    if (on_leading_zero) 
-                    {
-                        return_number.exponent -= 1;
-                        break;
-                    }
-                default:
-                    /* this case basically converts ASCII digits to BCD digits and encodes them, two to a byte.
-                    good god are graphing calculators cursed lmao
-
-                    TI deciding to store numbers this way is either insanely brilliant or completely stupid and I can't tell which */
-
-                    on_leading_zero = 0;
-                    number[i] -= '0'; // converting character from ASCII -> a number
-
-                    // taking care of rounding
-                    if (num_digits == 14 && number[i] >= 5) 
-                    {
-                        return_number = inc_mantissa(return_number); // since rounding a negative down and a positive up both increment the mantissa without regard to the sign, inc_mantissa works here
-                        break;
-                    } 
-                    else if (num_digits >= 14) 
-                    {
-                        break;
-                    }
-
-                    if (num_digits % 2 == 0)
-                    {
-                        number[i] <<= 4; // bitshifting number left by 4 since this digit is the most significant nibble in this byte
-                    }
-                
-                    return_number.mantissa[num_digits / 2] += number[i];
-                    ++num_digits;
-            }
-        }
-        else 
-        {
-            // code for what to do when we are at exponent
-            
-            sscanf(number + i + 1, "%d", &exponent_from_csv);
-            if (number[i] == '-')
-            {
-                exponent_from_csv = -exponent_from_csv;
-            }
-            if (exponent_from_csv > 99 || exponent_from_csv < -99)
-            {
-                fprintf(stderr, "Warning: Exponent %d is out of bounds and may cause overflow errors.", exponent_from_csv);
-                ++warning_counter;
-            }
-            return_number.exponent += (char) exponent_from_csv;
-            return return_number;
-        }
-        ++i;
-    }
-    if (!found_decimal_point) 
-    {
-        return_number.exponent += num_digits - 1;
-    }
-    return return_number;
-}
 %}
 
 %%
@@ -160,7 +21,7 @@ struct real_number parse_real_number(char *number) {
 }
 
 ^{CSV_ENTRY}    {
-        if (num_rows <= 1) 
+        if (num_rows == 0) 
         {
             num_cols = entries_in_current_row;
         } 
@@ -182,41 +43,33 @@ struct real_number parse_real_number(char *number) {
 %%
 
 /*
-Contains some necessary information about the file.
-*/
-struct file_info 
-{
-    int num_rows;
-    int num_cols;
-};
-
-
-/*
 Reads and parses CSV into the format used by TI-BASIC.
 Returns status. If the returned value is nonzero, an error occurred.
 */
-int read_csv(FILE *input_fileptr, FILE *output_fileptr, int csv_is_complex)
+struct csv_info read_csv(FILE *inputfp, FILE *outputfp, int csv_is_complex)
 {
     is_complex = csv_is_complex;
-
+    struct csv_info return_info = { .status = 0, .num_rows = 0, .num_cols = 0 };
     // validating file pointers (probably unnecessary but hey, why not)
-	if (input_fileptr) 
+	if (inputfp) 
     {
-        yyin = input_fileptr;
+        yyin = inputfp;
     } 
     else 
     {
-        fprintf(stderr, "Error: Could not find input file.\n"); // make this error message better
-        return 1;
+        fprintf(stderr, "Error: Input file does not exist.\n"); // make this error message better
+        return_info.status = 2;
+        return return_info;
     }
-    if (output_fileptr)
+    if (outputfp)
     {
-        yyout = output_fileptr;
+        yyout = outputfp;
     }
     else
     {
         fprintf(stderr, "Error: Pointer to output file was null.\n");
-        return 1;
+        return_info.status = 3;
+        return return_info;
     }
 
     // running the lexer
@@ -241,26 +94,19 @@ int read_csv(FILE *input_fileptr, FILE *output_fileptr, int csv_is_complex)
     }
 
     // checking to see if any errors/warnings occurred, displaying a message and exiting if needed.
-    if (error_counter || warning_counter)
+    if (error_counter)
     {
-        if (error_counter)
-        {
-            fprintf(stderr, "%d Errors, ", error_counter);
-        }
-        if (warning_counter)
-        {
-            fprintf(stderr, "%d Warnings ", warning_counter);
-        }
-        fprintf(stderr, "generated.\n");
-        if (error_counter)
-        {
-            fprintf(stderr, "Conversion of CSV to .8x* format failed.\n");
-            return 1;
-        }
+        fprintf(stderr, "%d Errors generated.\nConversion of CSV to .8x* failed.\n", error_counter);
+        return_info.status = 4;
+        return return_info;
     }
 
     // debug info
 	printf("\nrows: %d\n", num_rows);
 	printf("cols: %d\n", num_cols);
-    return 0;
+
+    return_info.num_rows = num_rows;
+    return_info.num_cols = num_cols;
+    return_info.status = 0;
+    return return_info;
 }
