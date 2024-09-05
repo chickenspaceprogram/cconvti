@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "flex_csv_parser/csv_parser.h"
+#include "flex-csv-parser/csv-parser.h"
 
 int main(int argc, char *argv[]) 
 {

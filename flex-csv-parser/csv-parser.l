@@ -1,8 +1,8 @@
 CSV_ENTRY   -?[0-9]+"."?[0-9]*([eE][+-][0-9]+)?
 
 %{
-    #include "csv_parser.h"
-    #include "num_parsing.h"
+    #include "csv-parser.h"
+    #include "num-parsing.h"
 
     // i know globals kinda suck, don't bully me
     int num_rows = 0;
