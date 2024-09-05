@@ -4,7 +4,7 @@ CSV_ENTRY   -?[0-9]+"."?[0-9]*([eE][+-][0-9]+)?
     int num_rows = 0;
     int num_cols = 0;
     int entries_in_current_row = 0;
-    int is_complex = 0;
+    int is_complex;
 /*
 A real number, represented as it is on TI-8x calculators.
 */
@@ -183,10 +183,11 @@ struct file_info
 /*
 Reads and parses CSV into the format used by TI-BASIC.
 */
-void read_csv(char *input_filename, FILE *output_fileptr, int is_complex)
+void read_csv(char *input_filename, FILE *output_fileptr, int csv_is_complex)
 {
     FILE *input_file_ptr = fopen(input_filename, "r");
     struct file_info output;
+    is_complex = csv_is_complex;
 
 	if(input_file_ptr) {
         yyin = input_file_ptr;
