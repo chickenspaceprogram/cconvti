@@ -1,10 +1,15 @@
 CSV_ENTRY   -?[0-9]+"."?[0-9]*([eE][+-][0-9]+)?
 
 %{
+    #include "csv_parser.h"
+
+    // eww globals
     int num_rows = 0;
     int num_cols = 0;
     int entries_in_current_row = 0;
     int is_complex;
+    int error_counter = 0;
+    int warning_counter = 0;
 /*
 A real number, represented as it is on TI-8x calculators.
 */
@@ -129,6 +134,11 @@ struct real_number parse_real_number(char *number) {
             {
                 exponent_from_csv = -exponent_from_csv;
             }
+            if (exponent_from_csv > 99 || exponent_from_csv < -99)
+            {
+                fprintf(stderr, "Warning: Exponent %d is out of bounds and may cause overflow errors.", exponent_from_csv);
+                ++warning_counter;
+            }
             return_number.exponent += (char) exponent_from_csv;
             return return_number;
         }
@@ -155,8 +165,8 @@ struct real_number parse_real_number(char *number) {
             num_cols = entries_in_current_row;
         } 
         else if (entries_in_current_row != num_cols) {
-            fprintf(stderr, "Uneven rows: Row %d is %d entries long, while other rows are %d entries long.\ncconvti exiting...\n", num_rows, entries_in_current_row, num_cols);
-            exit(1); // make this suck less
+            fprintf(stderr, "Uneven rows: Row %d is %d entries long, while the first row is %d entries long.\n", num_rows, entries_in_current_row, num_cols);
+            ++error_counter;
         }
         write_real_number(parse_real_number(yytext), yyout);
         ++num_rows;
@@ -166,7 +176,7 @@ struct real_number parse_real_number(char *number) {
 
 .   {
         fprintf(stderr, "Invalid entry `%s`.\n", yytext);
-        exit(1);
+        ++error_counter;
     }
 %%
 
@@ -182,36 +192,72 @@ struct file_info
 
 /*
 Reads and parses CSV into the format used by TI-BASIC.
+Returns status. If the returned value is nonzero, an error occurred.
 */
-void read_csv(char *input_filename, FILE *output_fileptr, int csv_is_complex)
+int read_csv(FILE *input_fileptr, FILE *output_fileptr, int csv_is_complex)
 {
-    FILE *input_file_ptr = fopen(input_filename, "r");
-    struct file_info output;
     is_complex = csv_is_complex;
 
-	if(input_file_ptr) {
+    // validating file pointers (probably unnecessary but hey, why not)
+	if (input_fileptr) 
+    {
         yyin = input_file_ptr;
-    } else {
-        fprintf(stderr, "Could not find the file at `%s`.\ncconvti exiting...\n", input_filename);
+    } 
+    else 
+    {
+        fprintf(stderr, "Error: Could not find input file.\n"); // make this error message better
+        return 1;
+    }
+    if (output_fileptr)
+    {
+        yyout = output_fileptr;
+    }
+    else
+    {
+        fprintf(stderr, "Error: Pointer to output file was null.\n");
+        return 1;
     }
 
-    yyout = output_fileptr;
+    // running the lexer
 	yylex();
-    fclose(input_file_ptr);
+
+    // checking the size of the last row
     if (num_rows <= 1) 
     {
         num_cols = entries_in_current_row;
     } 
     else if (entries_in_current_row != num_cols) {
-        fprintf(stderr, "Uneven rows: Row %d is %d entries long, while other rows are %d entries long.\ncconvti exiting...\n", num_rows, entries_in_current_row, num_cols);
-        exit(1); // make this suck less
+        fprintf(stderr, "Error: Uneven rows: Row %d is %d entries long, while other rows are %d entries long.\n", num_rows, entries_in_current_row, num_cols);
+        ++error_counter;
     }
+
+    // ensuring the user hasn't tried to make a complex matrix
+    if (num_rows > 1 && is_complex) {
+        fprintf(stderr, "Error: Cannot store complex values to a matrix.\n")
+        ++error_counter;
+    }
+
+    // checking to see if any errors/warnings occurred, displaying a message and exiting if needed.
+    if (error_counter || warning_counter)
+    {
+        if (error_counter)
+        {
+            fprintf(stderr, "%d Errors, ", error_counter);
+        }
+        if (warning_counter)
+        {
+            fprintf(stderr, "%d Warnings ", warning_counter);
+        }
+        fprintf(stderr, "occurred.\n");
+        if (error_counter)
+        {
+            fprintf("Conversion of CSV to .8x* format failed.\n");
+            return 1;
+        }
+    }
+
+    // debug info
 	printf("\nrows: %d\n", num_rows);
 	printf("cols: %d\n", num_cols);
-}
-
-int main(void) {
-    FILE *yeetfp = fopen("yeet.bin", "wb");
-    read_csv("mycsv.csv", yeetfp, 0);
-    fclose(yeetfp);
+    return 0;
 }

@@ -4,3 +4,4 @@ main
 bigarray.csv
 testing.csv
 mycsv.csv
+flex_csv_parser/csv_parser.c

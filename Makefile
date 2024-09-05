@@ -4,23 +4,21 @@
 all: main
 
 main: out/main.o out/loadcsv.o
-	cc -Wall -o main out/main.o out/loadcsv.o
+	cc -Wall -o main out/main.o out/csv_parser.o
 
 out/main.o: out main.c
 	cc -Wall -c -o out/main.o main.c
 
-out/loadcsv.o: out fileio/loadcsv.c
-	cc -Wall -o out/loadcsv.o fileio/loadcsv.c
-
 out/csv_parser.o: out/csv_parser.c
-	cc -Wall -ll -c -o out/csv_parser.o out/csv_parser.c
+	cc -Wall -ll -c -o out/csv_parser.o flex_csv_parser/csv_parser.c
 
-out/csv_parser.c: out flex_csv_parser/csv_parser.l
-	flex -o out/csv_parser.c flex_csv_parser/csv_parser.l
+flex_csv_parser/csv_parser.c: flex_csv_parser/csv_parser.l
+	flex -o flex_csv_parser/csv_parser.c flex_csv_parser/csv_parser.l
 
 clean:
 	rm -rf out
-	rm main
+	rm -f main
+	rm -f flex_csv_parser/csv_parser.c
 
 out:
 	mkdir out
