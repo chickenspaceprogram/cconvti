@@ -16,7 +16,7 @@ CSV_ENTRY   -?[0-9]+"."?[0-9]*([eE][+-][0-9]+)?
 %%
 
 ,{CSV_ENTRY}   {
-        write_real_number(parse_real_number(yytext + 1), yyout);
+        write_real_number(parse_real_number(yytext + 1, is_complex), yyout);
         ++entries_in_current_row;
 }
 
@@ -30,7 +30,7 @@ CSV_ENTRY   -?[0-9]+"."?[0-9]*([eE][+-][0-9]+)?
             fprintf(stderr, "Uneven rows: Row %d is %d entries long, while the first row is %d entries long.\n", num_rows, entries_in_current_row, num_cols);
             ++error_counter;
         }
-        write_real_number(parse_real_number(yytext), yyout);
+        write_real_number(parse_real_number(yytext, is_complex), yyout);
         ++num_rows;
         entries_in_current_row = 1;
     }

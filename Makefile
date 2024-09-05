@@ -3,22 +3,25 @@
 
 all: main
 
-main: out/main.o out/csv_parser.o
-	cc -Wall -ll -o main out/main.o out/csv_parser.o
+main: out/main.o out/csv-parser.o out/num-parsing.o
+	cc -Wall -ll -o main out/main.o out/csv-parser.o out/num-parsing.o
 
 out/main.o: out main.c
 	cc -Wall -c -o out/main.o main.c
 
-out/csv_parser.o: flex_csv_parser/csv_parser.c
-	cc -Wall -ll -c -o out/csv_parser.o flex_csv_parser/csv_parser.c
+out/csv-parser.o: flex-csv-parser/csv-parser.c
+	cc -Wall -c -o out/csv-parser.o flex-csv-parser/csv-parser.c
 
-flex_csv_parser/csv_parser.c: flex_csv_parser/csv_parser.l
-	flex -o flex_csv_parser/csv_parser.c flex_csv_parser/csv_parser.l
+out/num-parsing.o: flex-csv-parser/num-parsing.c
+	cc -Wall -c -o out/num-parsing.o flex-csv-parser/num-parsing.c
+
+flex-csv-parser/csv-parser.c: flex-csv-parser/csv-parser.l
+	flex -o flex-csv-parser/csv-parser.c flex-csv-parser/csv-parser.l
 
 clean:
 	rm -rf out
 	rm -f main
-	rm -f flex_csv_parser/csv_parser.c
+	rm -f flex-csv-parser/csv-parser.c
 
 out:
 	mkdir out
