@@ -1,5 +1,6 @@
 #include "file-header.h"
 
+void write_nulls(FILE *fp);
 
 int write_file_header(FILE *fp)
 {

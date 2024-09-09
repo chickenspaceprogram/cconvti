@@ -1,5 +1,6 @@
 #include "data-header.h"
 
+void write_nulls(FILE *fp);
 // these comments are unintelligible, sorry lol
 
 
@@ -42,7 +43,7 @@ int write_data_header(FILE *fp, char typeID, char *var_name, int is_archived)
 
 
 
-int edit_data_header(FILE *fp, unsigned short variable_data_length, long data_section_start)
+int edit_data_header(FILE *fp, unsigned short variable_data_length, unsigned long data_section_start)
 {
     if (fp == NULL)
     {

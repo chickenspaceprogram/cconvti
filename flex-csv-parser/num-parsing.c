@@ -1,9 +1,12 @@
 #include "num-parsing.h"
 
+struct real_number inc_mantissa(struct real_number number);
+
 /**
  * Increments the mantissa of `number` by 1, without regard for its sign or exponent.
  */
-struct real_number inc_mantissa(struct real_number number) {
+struct real_number inc_mantissa(struct real_number number) 
+{
     int current_digit;
     // the happy case
     for (int i = 13; i >= 0; --i) {

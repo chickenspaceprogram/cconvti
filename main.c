@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "flex-csv-parser/csv-parser.h"
 
-int main(int argc, char *argv[]) 
+int main(int argc, char **argv) 
 {
     // garbage arg handling, don't worry, this will be made to suck less in future
     // first arg is input, second is output
