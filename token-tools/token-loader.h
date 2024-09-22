@@ -3,10 +3,11 @@
 
 typedef struct token token;
 struct token {
-    int version;
-    int calc;
-    short bytes;
-    char *text;
+    char version;
+    char calc;
+    char bytes[2];
+    int key_offset;
+    token *next;
 };
 
 #endif
