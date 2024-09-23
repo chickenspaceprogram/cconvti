@@ -104,22 +104,17 @@ void *hash_map_set(hash_map *map, char *key, void *data) {
 }
 
 void *hash_map_get(hash_map *map, char *key) {
-    
+    return hm_get_internal_(map->hash_array, map->array_size, key)->data;
 }
 
 void hash_map_remove(hash_map *map, char *key) {
-    size_t index = hash_(key) & (map->array_size - 1);
-    size_t initial_index = index;
-    while ((map->hash_array[index].key != NULL) && (strcmp(map->hash_array[index].key, key) != 0)) {
-        ++index;
-        if (index == initial_index) {
-            return;
-        }
+    value *key_val_pair = hm_get_internal_(map->hash_array, map->array_size, key);
+    if (key_val_pair != NULL) {
+        free(key_val_pair->key);
+        free(key_val_pair->data);
+        key_val_pair->key = NULL;
+        key_val_pair->data = NULL;
     }
-    free(map->hash_array[index].key);
-    free(map->hash_array[index].data);
-    map->hash_array[index].key = NULL;
-    map->hash_array[index].data = NULL;
 }
 
 size_t hash_map_size(hash_map *map) {
@@ -159,7 +154,21 @@ value *hm_set_internal_(value *array, size_t array_size, char *key, void *data, 
 }
 
 value *hm_get_internal_(value *array, size_t array_size, char *key) {
-    
+    size_t index = hash_(key) & (array_size - 1);
+    size_t start_index = index;
+    while (array[index].key != NULL) {
+        if (strcmp(array[index].key, key)) {
+            break;
+        }
+        ++index;
+        if (index == start_index) {
+            return NULL;
+        }
+    }
+    if (array[index].key == NULL) {
+        return NULL;
+    }
+    return &(array[index]);
 }
 
 // need to handle this returning NULL!
