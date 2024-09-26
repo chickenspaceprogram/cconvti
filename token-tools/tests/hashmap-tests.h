@@ -3,5 +3,6 @@
 
 #include "../hashmap.h"
 
+void hashmap_tests();
 
 #endif

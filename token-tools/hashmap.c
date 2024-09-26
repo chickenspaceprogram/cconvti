@@ -17,7 +17,7 @@ uint64_t hash_(char *str);
  * `data` : A pointer to the value to be stored in the hashmap.
  * `data_size` : The size of the data to be added to the hashmap.
  */
-value *hm_set_internal_(value *array, size_t array_size, char *key, void *data, size_t data_size);
+value *hm_set_internal_(hash_map *hm, char *key, void *value);
 
 /**
  * An internal function that gets the key-value pair associated with a key.
@@ -89,6 +89,13 @@ void hash_map_free(hash_map *map) {
 }
 
 void *hash_map_set(hash_map *map, char *key, void *data) {
+    void *copied_data = malloc(map->element_size);
+    if (copied_data == NULL) {
+        hash_map_free(map);
+        return NULL;
+    }
+    memcpy(copied_data, data, map->element_size);
+
     if ((map->num_elements / map->array_size) > MAX_FILL_LEVEL) {
         value *new_array = hm_double_size_(map);
         if (new_array == NULL) {
@@ -96,11 +103,12 @@ void *hash_map_set(hash_map *map, char *key, void *data) {
             return NULL;
         }
     }
-    value *valptr = hm_set_internal_(map->hash_array, map->array_size, key, data, map->element_size);
+    value *valptr = hm_set_internal_(map, key, copied_data);
     if (valptr == NULL) {
         hash_map_free(map);
         return NULL;
     }
+    return valptr->data;
 }
 
 void *hash_map_get(hash_map *map, char *key) {
@@ -122,35 +130,31 @@ size_t hash_map_size(hash_map *map) {
 }
 
 // only call this when it is safe to do so! this function assumes that there is space in the hashmap.
-value *hm_set_internal_(value *array, size_t array_size, char *key, void *data, size_t data_size) {
+value *hm_set_internal_(hash_map *hm, char *key, void *data) {
 
-    size_t index = hash(key) & (array_size - 1); // binary AND is used instead of modulus because n % 2^k == n & (2^k - 1)
+    size_t index = hash_(key) & (hm->array_size - 1); // binary AND is used instead of modulus because n % 2^k == n & (2^k - 1)
     size_t key_length = strlen(key);
 
-    while (array[index].key != NULL) {
-        if (strcmp(key, array[index].key) == 0) {
-            array[index].data = data;
-            return;
+    while (hm->hash_array[index].key != NULL) {
+        if (strcmp(key, hm->hash_array[index].key) == 0) {
+            free(data);
+            hm->hash_array[index].data = data;
+            return &(hm->hash_array[index]);
         }
 
         ++index;
-        index = index & (array_size - 1); // keeps the index within the bounds of the table
+        index &= hm->array_size - 1; // keeps the index within the bounds of the table
     }
-    array[index].key = malloc(sizeof(char) * (key_length + 1));
-    if (array[index].key == NULL) {
+    hm->hash_array[index].key = malloc(sizeof(char) * (key_length + 1));
+    if (hm->hash_array[index].key == NULL) {
         return NULL;
     }
-    strcpy(array[index].key, key);
-    array[index].key[key_length] = 0x00;
+    strcpy(hm->hash_array[index].key, key);
+    hm->hash_array[index].key[key_length] = 0x00;
 
-    array[index].data = malloc(data_size);
-    if (array[index].data == NULL) {
-        free(array[index].key);
-        array[index].key = NULL;
-        return NULL;
-    }
-    memcpy(array[index].data, data, data_size);
-    return &(array[index]);
+    hm->hash_array[index].data = data;
+    (hm->num_elements)++;
+    return &(hm->hash_array[index]);
 }
 
 value *hm_get_internal_(value *array, size_t array_size, char *key) {
@@ -164,7 +168,9 @@ value *hm_get_internal_(value *array, size_t array_size, char *key) {
         if (index == start_index) {
             return NULL;
         }
+        index &= array_size - 1;
     }
+    printf("ligma%zu\n", index);
     if (array[index].key == NULL) {
         return NULL;
     }
@@ -173,22 +179,27 @@ value *hm_get_internal_(value *array, size_t array_size, char *key) {
 
 // need to handle this returning NULL!
 value *hm_double_size_(hash_map *map) {
-    value *new_array = allocate_array_(map->array_size * 2);
-    if (new_array == NULL) {
+    hash_map *temp_map = hash_map_init(map->element_size);
+    free(temp_map->hash_array);
+    temp_map->hash_array = allocate_array_(map->array_size * 2);
+    temp_map->array_size = map->array_size * 2;
+
+    if (temp_map->hash_array == NULL) {
         hash_map_free(map);
         return NULL;
     }
-    size_t new_array_size = map->array_size * 2;
 
     for (int i = 0; i < map->array_size; ++i) {
         if (map->hash_array[i].key != NULL) {
-            _hm_set(new_array, new_array_size, map->hash_array[i].key, map->hash_array[i].data);
+            hm_set_internal_(temp_map, map->hash_array[i].key, map->hash_array[i].data); // using the internal func because we don't want to copy the data. we can just copy the pointers to it
         }
     }
     free(map->hash_array);
-    map->hash_array = new_array;
-    map->array_size = new_array_size;
-    return new_array;
+    map->hash_array = temp_map->hash_array;
+    map->array_size = temp_map->array_size;
+
+    free(temp_map); // not using hash_map_free because that'd free the arrays that I just passed to the actual map
+    return map->hash_array;
 }
 
 value *allocate_array_(size_t size) {
@@ -197,6 +208,7 @@ value *allocate_array_(size_t size) {
     for (int i = 0; i < ARRAY_DEFAULT_SIZE; ++i) {
         array[i] = (value) {NULL, NULL}; // setting all of the pointers in the array to NULL
     }
+    return array;
 }
 
 uint64_t hash_(char *str) {

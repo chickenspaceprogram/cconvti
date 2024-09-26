@@ -19,11 +19,14 @@ out/num-parsing.o: flex-csv-parser/num-parsing.c
 flex-csv-parser/csv-parser.c: flex-csv-parser/csv-parser.l
 	flex -o flex-csv-parser/csv-parser.c flex-csv-parser/csv-parser.l
 
+out/hashmap.o: token-tools/hashmap.c
+	cc -Wall -c -o out/hashmap.o token-tools/hashmap.c
+
 out:
 	mkdir out
 
 # tests
-test: out out/tests.o out/hashmap-tests.o
+test: out out/tests.o out/hashmap-tests.o out/hashmap.o
 	cc -Wall -o test out/tests.o out/hashmap-tests.o out/hashmap.o
 	./test
 

@@ -1,3 +1,5 @@
 #include "token-tools/tests/hashmap-tests.h"
 
-int main(void) {}
+int main(void) {
+    hashmap_tests();
+}
